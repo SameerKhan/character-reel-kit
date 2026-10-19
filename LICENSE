@@ -22,10 +22,21 @@ SOFTWARE.
 
 ---
 
-Not covered by this licence: the Social Champ name, logo and wordmark
-(scripts/engine/assets/), the Switch mascot and the Leo character as designed
-and modelled in scripts/engine/switch.js and scripts/engine/man.js, the screen
-captures in scripts/engine/assets/screens/, and the example reel and its audio
-(media/, examples/). These belong to Social Champ, all rights reserved; the
-example audio was generated with ElevenLabs (elevenlabs.io). You may render
-the example to study the kit; use your own characters and brand for your reels.
+Social Champ materials (not covered by the MIT licence above)
+
+Owner: Social Champ. Published here by Sameer Ahmed Khan, Social Champ's co-founder and CEO, on Social Champ's behalf.
+
+Covered files: scripts/engine/assets/ (the Social Champ name, logo and wordmark, and the screen captures in
+scripts/engine/assets/screens/), scripts/engine/switch.js and scripts/engine/man.js in full (the Switch mascot and
+the Leo character as designed and modelled), and the example reel and its audio and data (media/, examples/).
+
+You may download, clone or fork this repository with these files in it, and render the example on your own machine
+to learn how the kit works. You may not use the Social Champ name or logo, the Switch mascot, the Leo character or the
+screen captures in your own videos or products, redistribute them outside copies of this repository, or use any of
+them commercially. All other rights are reserved.
+
+The screen captures are first-party Social Champ marketing images (as published on Social Champ's own site); they
+contain no personal data. In brand.png the stock photo of the demo post has been replaced with a plain fill, so
+no third-party photograph is redistributed here; the example reel shows the original only blurred on a background
+monitor, as part of Social Champ's own marketing image. The example audio was generated with elevenlabs.io on ElevenLabs' free plan, which has no
+commercial licence: it is included for demonstration only and may not be reused.
