@@ -1,0 +1,10 @@
+{
+  "name": "character-reel",
+  "displayName": "Character Reel",
+  "description": "Make a short two-character comedy reel with /character-reel: a mascot and a human in a three.js set, voiced by ElevenLabs v3 as one acted conversation, timing re-anchored to Whisper so captions never drift, gap-free line tiling, beat-cut camera with two-shot facing cheats, sentence-aware captions with time digits, ducked music mix, and scripted gates (caption sync, loudness, true peak, length).",
+  "version": "1.0.0",
+  "author": {
+    "name": "Sameer Ahmed Khan"
+  },
+  "license": "MIT"
+}

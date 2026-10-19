@@ -1,0 +1,258 @@
+{
+ "id": "ep01-wrap",
+ "title": "That's a wrap",
+ "page": "desk.html",
+ "duck_hp": 90,
+ "screens": [
+  "top-posts",
+  "brand"
+ ],
+ "claims_checked_against": "Social Champ's influencer brief (published posts, best-performing post, best time to post from past performance); one causal product idea, Switch schedules nothing.",
+ "cast": {
+  "human": {
+   "name": "Leo"
+  },
+  "switch": {
+   "name": "Switch"
+  }
+ },
+ "lines": [
+  {
+   "who": "human",
+   "text": "Hey Switch, did I post my lunch on the client's LinkedIn?",
+   "face": "worried",
+   "pose": "phone",
+   "pause": 0.75,
+   "ex": 0.75,
+   "cfg": 0.45
+  },
+  {
+   "who": "switch",
+   "text": "Yes. You did.",
+   "eyes": "flat",
+   "pause": 0.7,
+   "ex": 0.35,
+   "cfg": 0.5
+  },
+  {
+   "who": "human",
+   "text": "Please say it was a draft.",
+   "face": "worried",
+   "pose": "rest",
+   "pause": 0.6,
+   "ex": 0.7,
+   "cfg": 0.45
+  },
+  {
+   "who": "switch",
+   "text": "It was not a draft.",
+   "eyes": "flat",
+   "pause": 0.65,
+   "ex": 0.4,
+   "cfg": 0.5
+  },
+  {
+   "who": "human",
+   "text": "It was a wrap.",
+   "face": "deadpan",
+   "pose": "rest",
+   "pause": 0.7,
+   "ex": 0.5,
+   "cfg": 0.5
+  },
+  {
+   "who": "switch",
+   "text": "It's doing numbers.",
+   "eyes": "dots",
+   "pause": 0.6,
+   "ex": 0.5,
+   "cfg": 0.5
+  },
+  {
+   "who": "human",
+   "text": "How many?",
+   "face": "neutral",
+   "pose": "rest",
+   "pause": 0.6,
+   "ex": 0.6,
+   "cfg": 0.5
+  },
+  {
+   "who": "switch",
+   "text": "Nine hundred likes.",
+   "eyes": "flat",
+   "pause": 0.65,
+   "ex": 0.5,
+   "cfg": 0.5
+  },
+  {
+   "who": "human",
+   "text": "Our launch post got twelve.",
+   "face": "deadpan",
+   "pose": "rest",
+   "pause": 0.6,
+   "ex": 0.55,
+   "cfg": 0.45
+  },
+  {
+   "who": "switch",
+   "text": "Twelve hundred?",
+   "eyes": "o",
+   "pause": 0.6,
+   "ex": 0.45,
+   "cfg": 0.5
+  },
+  {
+   "who": "human",
+   "text": "Twelve likes.",
+   "face": "deadpan",
+   "pose": "rest",
+   "pause": 1.6,
+   "punch": true,
+   "ex": 0.55,
+   "cfg": 0.5
+  },
+  {
+   "who": "human",
+   "text": "Someone commented. \"Is the wrap on the enterprise plan?\"",
+   "face": "surprised",
+   "pose": "phone",
+   "pause": 0.65,
+   "ex": 0.7,
+   "cfg": 0.45
+  },
+  {
+   "who": "switch",
+   "text": "Is it, though?",
+   "eyes": "o",
+   "pause": 0.6,
+   "ex": 0.4,
+   "cfg": 0.5
+  },
+  {
+   "who": "human",
+   "text": "Take it down.",
+   "face": "glare",
+   "pose": "point",
+   "pause": 0.65,
+   "ex": 0.6,
+   "cfg": 0.45
+  },
+  {
+   "who": "switch",
+   "text": "Don't. It's their best post this month.",
+   "eyes": "flat",
+   "pause": 0.6,
+   "ex": 0.45,
+   "cfg": 0.5
+  },
+  {
+   "who": "human",
+   "text": "It's my lunch.",
+   "face": "deadpan",
+   "pose": "shrug",
+   "pause": 0.6,
+   "ex": 0.65,
+   "cfg": 0.45
+  },
+  {
+   "who": "switch",
+   "text": "It went out at twelve thirty. Your best time to post.",
+   "eyes": "star",
+   "pause": 0.6,
+   "ex": 0.5,
+   "cfg": 0.5,
+   "caption_map": [
+    [
+     "twelve thirty",
+     "12:30"
+    ]
+   ]
+  },
+  {
+   "who": "human",
+   "text": "We sell payroll software.",
+   "face": "deadpan",
+   "pose": "facepalm",
+   "pause": 1.8,
+   "punch": true,
+   "ex": 0.6,
+   "cfg": 0.5
+  },
+  {
+   "who": "human",
+   "text": "Fine. It stays. We relaunch tomorrow at twelve thirty.",
+   "face": "neutral",
+   "pose": "rest",
+   "pause": 0.6,
+   "ex": 0.5,
+   "cfg": 0.45,
+   "caption_map": [
+    [
+     "twelve thirty",
+     "12:30"
+    ]
+   ]
+  },
+  {
+   "who": "switch",
+   "text": "Twelve thirty.",
+   "eyes": "happy",
+   "pause": 0.7,
+   "ex": 0.45,
+   "cfg": 0.5,
+   "caption_map": [
+    [
+     "twelve thirty",
+     "12:30"
+    ]
+   ]
+  },
+  {
+   "who": "human",
+   "text": "It's twelve twenty nine. I'm getting lunch.",
+   "face": "smile",
+   "pose": "rest",
+   "pause": 0.6,
+   "ex": 0.55,
+   "cfg": 0.45,
+   "caption_map": [
+    [
+     "twelve twenty nine",
+     "12:29"
+    ]
+   ]
+  },
+  {
+   "who": "switch",
+   "text": "Don't post it.",
+   "eyes": "flat",
+   "pause": 0.75,
+   "ex": 0.5,
+   "cfg": 0.5
+  },
+  {
+   "who": "human",
+   "text": "Already scheduled. Same wrap.",
+   "face": "smile",
+   "pose": "phone",
+   "pause": 0.8,
+   "punch": true,
+   "ex": 0.6,
+   "cfg": 0.45
+  },
+  {
+   "who": "switch",
+   "text": "That's a wrap.",
+   "eyes": "happy",
+   "pause": 1.0,
+   "ex": 0.45,
+   "cfg": 0.5
+  }
+ ],
+ "end_card": "lockup",
+ "tagline": [
+  "Ask what's working.",
+  "Do more of it."
+ ]
+}

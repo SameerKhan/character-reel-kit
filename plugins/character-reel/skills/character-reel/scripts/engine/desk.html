@@ -1,0 +1,365 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700;800&display=block" rel="stylesheet">
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">
+{ "imports": {
+  "three": "./node_modules/three/build/three.module.js",
+  "three/addons/": "./node_modules/three/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<script type="module">
+// The desk world (2026-10-15): the Claude & Pixel FORMAT (two-hander rhythm, ~2.3 s cuts, deadpan beats, dutch
+// tilts on the mascot's reactions, night lighting) in our own world: Switch and Leo stand on a giant phone on a
+// social media manager's desk. The human role is generic: script lines use who:"human", face:, pose:.
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { createSwitch } from './switch.js';
+import { createMan } from './man.js';
+import { buildDeskSet } from './set-desk.js';
+
+const PARAMS = new URLSearchParams(location.search);
+const EP = PARAMS.get('ep') || 'ep01-wrap';
+const REVIEW = PARAMS.has('review'); // monitors blanked: frames safe to show anyone
+const timing = await (await fetch(`../episodes/${EP}/timing.json`)).json();
+const END_CARD = 2.4;
+const W = 1080, H = 1920;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H);
+renderer.toneMapping = THREE.NoToneMapping;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+
+// ---------- staging (C&P geometry): Leo front-left nearer camera, Switch deeper back-right facing him ----------
+const HU_POS = new THREE.Vector3(-0.8, 0, 1.2), HU_YAW = 0.95, HU_SCALE = 1.15;
+// in shots that hold both characters Leo's body turns to Switch (a continuity cheat hidden by the cut); his singles
+// keep HU_YAW, cheated toward the lens so his face reads
+const HU_YAW_TWO = Number(PARAMS.get('huTwo') ?? 1.95);
+// and Switch turns a little further to Leo in the wides (the camera sits almost behind him, so her true eyeline reads as lens)
+const SW_YAW_TWO = Number(PARAMS.get('swTwo') ?? -1.1);
+const SW_TURN_SHOTS = new Set(['wide', 'phoneWide']); // the high wide already reads as her looking down at him
+const SW_POS = new THREE.Vector3(1.0, 0, -0.9), SW_YAW = -0.71;
+// canvas textures (sticky notes, the feed) use DM Sans: load it before they are drawn
+await Promise.all(['600 46px', '700 68px', '800 200px', '500 84px', '800 64px', '600 48px'].map((f) => document.fonts.load(`${f} "DM Sans"`)));
+const set = buildDeskSet(scene, { screens: (timing.screens || ['top-posts', 'brand']).map((n) => `./assets/screens/${n}.png`), review: REVIEW });
+
+const human = createMan();
+human.root.position.copy(HU_POS); human.root.rotation.y = HU_YAW; human.root.scale.setScalar(HU_SCALE);
+scene.add(human.root);
+human.state.pose = human.state.prevPose = 'rest'; human.update(); scene.updateMatrixWorld(true);
+const HU_HEAD_REST = human.head.getWorldPosition(new THREE.Vector3());
+
+const sw = createSwitch({ look: 'campaign' });
+sw.root.position.copy(SW_POS); sw.root.rotation.y = SW_YAW;
+scene.add(sw.root);
+
+const fwd = (yaw) => new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+const SW_FACE = SW_POS.clone().add(fwd(SW_YAW).multiplyScalar(0.5)).add(new THREE.Vector3(0, 1.8, 0));
+const HU_FACE = HU_HEAD_REST.clone();
+const SW_TOP = SW_POS.clone().add(new THREE.Vector3(0, 2.62, 0));
+const HU_TOP = HU_FACE.clone().add(new THREE.Vector3(0, 0.4, 0));
+
+// ---------- cameras ----------
+// Switch: dead-frontal (turned toward the audience), a dutch variant (roll applied after lookAt) for deadpan
+// reactions and holds, a low hero; Leo: low 3/4, CU, over his shoulder onto Switch; wides at three heights;
+// an insert straight down onto the phone feed. Every camera stays on the audience side.
+const CAMDIR = fwd(SW_YAW + 0.45);
+const PERP = new THREE.Vector3(0.76, 0, 0.65);
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const swAlong = (dir, k, lift) => SW_FACE.clone().add(dir.clone().multiplyScalar(k)).add(V3(0, lift, 0));
+const SHOTS = {
+  swFront:   { who: 'switch', pos: swAlong(CAMDIR, 2.7, 0.05), at: SW_FACE.clone(), fov: 30, roll: 0 },
+  swDutch:   { who: 'switch', pos: swAlong(CAMDIR, 2.5, -0.15), at: SW_FACE.clone(), fov: 26, roll: -0.17 },
+  swDutchR:  { who: 'switch', pos: swAlong(CAMDIR, 2.6, -0.1), at: SW_FACE.clone(), fov: 27, roll: 0.15 },
+  swLow:     { who: 'switch', pos: swAlong(CAMDIR, 4.2, -0.95), at: SW_FACE.clone().add(V3(0, -0.3, 0)), fov: 30, roll: 0 },
+  manLow34:  { who: 'human', pos: HU_FACE.clone().add(V3(2.5, -0.6, 2.4)), at: HU_FACE.clone().add(V3(0, -0.25, 0)), fov: 30, roll: 0 },
+  manCU:     { who: 'human', pos: HU_FACE.clone().add(V3(2.1, -0.2, 1.75)), at: HU_FACE.clone().add(V3(0, -0.1, 0)), fov: 26, roll: 0 },
+  behindMan: { who: 'switch', pos: swAlong(fwd(SW_YAW), 6.2, 1.5).add(PERP.clone().multiplyScalar(1.15)), at: SW_FACE.clone().add(V3(0, -0.35, 0)), fov: 26, roll: 0 },
+  wide:      { who: 'both', pos: V3(0.3, 2.3, 9.5), at: V3(0.1, 1.4, 0.0), fov: 40, roll: 0 },
+  highWide:  { who: 'both', pos: V3(0.6, 6.8, 6.0), at: V3(0.1, 0.6, 0.0), fov: 44, roll: 0 },
+  phoneWide: { who: 'both', pos: V3(0.4, 0.45, 6.2), at: V3(0.1, 1.3, 0.0), fov: 42, roll: 0 },
+  insert:    { who: 'none', pos: V3(0.1, 9.2, -5.0), at: V3(0.0, 0, -7.3), fov: 60, roll: 0.0 }, // straight down onto the wrap post on the phone feed
+};
+const SINGLES = { switch: ['swFront', 'swLow', 'behindMan'], human: ['manLow34', 'manCU'] };
+const REACT = { switch: ['swDutch', 'swDutchR'], human: ['manCU', 'manLow34'] };
+const WIDES = ['wide', 'highWide', 'phoneWide'];
+const BOTH_IN_FRAME = new Set(['behindMan', 'wide', 'highWide', 'phoneWide']);
+
+// ---------- captions: one static line per phrase, breaking on the speaker's pauses ----------
+// rules ported from Fats403/remotion-captions-kit (MIT) and the decompiled reference
+const CAP = { gap: 0.38, sentGap: 0.2, maxChars: 38, minShow: 0.7, size: 68, minSize: 50, maxWidth: 980 };
+// when a phrase is too long for one line, break before a joining word rather than mid-phrase
+const JOINERS = /^(to|from|on|for|and|or|of|with|in|at|but|so)$/i;
+// a word ends a sentence when it ends in . ? or ! (closing quotes or brackets allowed), unless it is a common abbreviation
+const ABBREV = /^(mr|mrs|ms|dr|st|vs|etc|inc|ltd|jr|sr|e\.g|i\.e)\.$/i;
+const endsSentence = (w) => /[.?!]["'\u201d\u2019)\]]*$/.test(w) && !ABBREV.test(w.replace(/["'\u201d\u2019)\]]+$/, ''));
+function chunkLine(line) {
+  const fin = (c) => { c.text = c.words.map((x) => x.w).join(' '); c.s = c.words[0].s; c.e = c.words[c.words.length - 1].e; return c; };
+  const out = []; let cur = null;
+  line.words.forEach((w, i) => {
+    const prev = line.words[i - 1];
+    const gap = prev ? w.s - prev.e : 0;
+    const sentence = prev && endsSentence(prev.w); // a new sentence always gets its own caption, even with no pause
+    if (!cur || gap >= CAP.gap || sentence) { cur = { words: [w] }; out.push(cur); return; }
+    if ((cur.words.map((x) => x.w).join(' ') + ' ' + w.w).length > CAP.maxChars) {
+      // too long for one line: break after the last comma if there is one, else here
+      const at = cur.words.map((x) => /,$/.test(x.w)).lastIndexOf(true);
+      const join = cur.words.map((x, k) => k > 0 && JOINERS.test(x.w)).lastIndexOf(true);
+      if (at >= 0 && at < cur.words.length - 1) { const moved = cur.words.splice(at + 1); cur = { words: moved }; out.push(cur); }
+      else if (cur.words.slice(0, -1).some((x) => /[.?!]$/.test(x.w))) { const k = cur.words.map((x) => /[.?!]$/.test(x.w)).lastIndexOf(true); const moved = cur.words.splice(k + 1); cur = { words: moved }; out.push(cur); }
+      else if (join > 0) { const moved = cur.words.splice(join); cur = { words: moved }; out.push(cur); }
+      else { cur = { words: [] }; out.push(cur); }
+    }
+    cur.words.push(w);
+  });
+  out.forEach(fin);
+  // merge a chunk into the previous one when it would flash by too fast and they still fit one line
+  for (let i = 0; i < out.length - 1; i++) {
+    const a = out[i], b = out[i + 1];
+    if (b.s - a.s < CAP.minShow && !endsSentence(a.words[a.words.length - 1].w) && (a.text + ' ' + b.text).length <= CAP.maxChars) { a.words.push(...b.words); fin(a); out.splice(i + 1, 1); i--; }
+  }
+  return out;
+}
+timing.lines.forEach((ln, i) => {
+  ln.chunks = chunkLine(ln);
+  const nextStart = timing.lines[i + 1] ? timing.lines[i + 1].start : Infinity;
+  ln.chunks.forEach((c, j) => {
+    c.show = c.s - 0.04;
+    const prevEnd = j > 0 ? ln.chunks[j - 1].words[ln.chunks[j - 1].words.length - 1].w : '';
+    if (j > 0 && !endsSentence(prevEnd)) c.text = '...' + c.text; // a continued phrase, as in the reference; a new sentence gets none
+    const nxt = ln.chunks[j + 1];
+    c.hide = nxt ? nxt.s - 0.04 : Math.min(Math.max(c.e + 0.3, c.show + CAP.minShow), nextStart - 0.04);
+  });
+});
+
+const overlay = document.createElement('canvas'); overlay.width = W; overlay.height = H;
+const octx = overlay.getContext('2d');
+const overlayTex = new THREE.CanvasTexture(overlay); overlayTex.colorSpace = THREE.SRGBColorSpace;
+const overlayScene = new THREE.Scene();
+overlayScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: overlayTex, transparent: true, depthTest: false, fog: false, toneMapped: false })));
+const overlayCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const markImg = new Image(); markImg.src = './assets/logo-mark.png';
+const wordmark = new Image(); wordmark.src = './assets/socialchamp-wordmark-white.png';
+
+function captionAnchor() { return { x: W / 2, y: 610 }; } // fixed, upper-middle third
+function drawCaption(chunk, who, cam) {
+  // never break a phrase: shrink it until it fits on one line
+  let size = CAP.size;
+  octx.font = `700 ${size}px "DM Sans"`;
+  while (octx.measureText(chunk.text).width > CAP.maxWidth && size > CAP.minSize) { size -= 2; octx.font = `700 ${size}px "DM Sans"`; }
+  octx.textAlign = 'center'; octx.textBaseline = 'middle';
+  const a = captionAnchor(who, cam);
+  octx.shadowColor = 'rgba(0,0,0,0.9)'; octx.shadowBlur = 12; octx.shadowOffsetY = 3;
+  octx.lineJoin = 'round'; octx.lineWidth = Math.round(size * 0.14); octx.strokeStyle = 'rgba(20,14,10,0.92)';
+  octx.strokeText(chunk.text, a.x, a.y);
+  octx.shadowColor = 'transparent';
+  octx.fillStyle = '#ffffff';
+  octx.fillText(chunk.text, a.x, a.y);
+  octx.shadowColor = 'transparent'; octx.shadowBlur = 0; octx.shadowOffsetY = 0;
+  octx.textAlign = 'left';
+}
+function drawEndCard(alpha) {
+  octx.globalAlpha = alpha;
+  octx.fillStyle = 'rgba(26,22,19,0.86)'; octx.fillRect(0, 0, W, H);
+  octx.drawImage(wordmark, (W - 330 * 1.25) / 2, 150, 330 * 1.25, 56 * 1.25);
+  octx.textAlign = 'center'; octx.textBaseline = 'alphabetic'; octx.fillStyle = '#ffffff';
+  const [t1, t2] = timing.tagline || ['You are not meant to', 'do everything.'];
+  octx.letterSpacing = '-2px';
+  octx.font = '500 84px "DM Sans"'; octx.fillText(t1, W / 2, 640);
+  octx.font = '800 84px "DM Sans"'; octx.fillText(t2, W / 2, 742);
+  octx.textAlign = 'left';
+  octx.font = '800 200px "DM Sans"'; octx.letterSpacing = '-8px';
+  const sw1 = octx.measureText('Sw').width, tch = octx.measureText('tch').width;
+  const markH = 164, markW = markH * (markImg.width / markImg.height);
+  let x = (W - (sw1 + markW + 8 + tch)) / 2; const y1 = 1010;
+  octx.fillText('Sw', x, y1); x += sw1 + 4;
+  octx.drawImage(markImg, x, y1 - markH + 8, markW, markH); x += markW + 4;
+  octx.fillText('tch', x, y1);
+  const to = octx.measureText('to ').width;
+  x = (W - (to + octx.measureText('better').width)) / 2;
+  octx.fillText('to ', x, y1 + 205);
+  octx.fillStyle = '#ff6900'; octx.fillText('better', x + to, y1 + 205);
+  octx.letterSpacing = '0px'; octx.globalAlpha = 1;
+}
+
+// ---------- shot plan: cut on beats, not on every speaker change ----------
+// punchline -> the listener; a hold >= 1.4 s gets two cuts (reaction, then the other side or a wide); a wide after
+// every four singles; no shot repeats within three cuts; the first line opens wide, the last line closes wide.
+const plan = [];
+const recent = [];
+let singles = 0;
+const MIN_SHOT = 0.9; // a cut that would leave the previous shot shorter than this is dropped (no flash cuts)
+function cut(shot, at) {
+  const prev = plan[plan.length - 1];
+  if (prev && at - prev.t < MIN_SHOT) return false;
+  recent.push(shot); plan.push({ t: at, shot }); if (WIDES.includes(shot)) singles = 0; else singles++;
+  return true;
+}
+function pick(cands, at) {
+  const fresh = cands.filter((c) => !recent.slice(-3).includes(c));
+  const pool = fresh.length ? fresh : cands.filter((c) => c !== recent[recent.length - 1]);
+  const scored = (pool.length ? pool : cands).map((c) => ({ c, last: recent.lastIndexOf(c) }));
+  scored.sort((a, b) => a.last - b.last);
+  cut(scored[0].c, at); return scored[0].c;
+}
+const other = (who) => (who === 'switch' ? 'human' : 'switch');
+const lastCut = () => plan[plan.length - 1];
+timing.lines.forEach((ln, i) => {
+  const start = ln.start - 0.1;
+  const dur = ln.end - ln.start;
+  const last = i === timing.lines.length - 1;
+  if (i === 0) cut('wide', 0);
+  else if (last) cut('wide', start);
+  else if (ln.insert) cut('insert', start);
+  else if (ln.who === 'switch' && ln.punch) pick(REACT.human, start); // the listener owns Switch's punchlines
+  else if (singles >= 4) pick(WIDES, start);
+  else if (dur < 1.0 && lastCut() && BOTH_IN_FRAME.has(lastCut().shot) && start - lastCut().t < 2.2) { /* short reply: hold */ }
+  else pick(SINGLES[ln.who], start);
+  let shotStart = start;
+  ln.chunks.forEach((c, j) => {
+    if (j > 0 && c.s - shotStart >= 1.9 && ln.end - c.s >= 0.8) { pick(SINGLES[other(ln.who)], c.s - 0.06); shotStart = c.s; }
+  });
+  const nxt = timing.lines[i + 1];
+  const gap = nxt ? nxt.start - ln.end : 0;
+  if (!last && ln.who === 'human' && ln.punch && gap >= 0.6 && gap < 1.4) pick(REACT.switch, ln.end + 0.08); // Switch reacts to his punchline
+  if (!last && gap >= 1.4) { // a comic hold: the listener reacts, then the other side
+    pick(REACT[other(ln.who)], ln.end + 0.08);
+    pick(ln.who === 'human' ? ['manCU', 'manLow34'] : ['swDutch', 'swFront'], ln.end + 1.0); // >= MIN_SHOT after the reaction
+  }
+});
+plan.sort((a, b) => a.t - b.t);
+if (new URLSearchParams(location.search).has('debug')) console.log('PLAN ' + JSON.stringify(plan.map((p) => [Math.round(p.t * 100) / 100, p.shot])));
+
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.05, 400);
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(W, H, { samples: 4, type: THREE.HalfFloatType }));
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), 0.55, 0.6, 0.85));
+composer.addPass(new OutputPass());
+
+// ---------- acting: holds, with motion only on authored beats ----------
+const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+const pulse = (t, a, up, down) => (t < a ? 0 : t < a + up ? ease((t - a) / up) : t < a + up + down ? 1 - ease((t - a - up) / down) : 0);
+// deterministic blink schedule per character (seeded), 3-5 s apart
+function blinks(seed) {
+  let a = seed, t = 1.2; const out = [];
+  while (t < 200) { a = (a * 16807) % 2147483647; t += 3 + (a / 2147483647) * 2; out.push(t); }
+  return out;
+}
+const SW_BLINKS = blinks(11), HU_BLINKS = blinks(29);
+const blinkAt = (list, t) => list.reduce((m, b) => Math.max(m, pulse(t, b, 0.06, 0.1)), 0);
+
+// Switch's arm pose: only lines with an explicit `action` change it; it holds for that turn and the next
+const ARM_ACTIONS = { wave: 'wave', cheer: 'cheer', heart: 'heart', hips: 'hips', cross: 'cross', chin: 'chin', typing: 'typing' };
+const armTrack = []; let lastArms = 'rest', holdUntil = -1;
+timing.lines.forEach((ln, i) => {
+  if (ln.who === 'switch' && ARM_ACTIONS[ln.action]) { armTrack.push({ t: ln.start - 0.05, arms: ARM_ACTIONS[ln.action] }); lastArms = ARM_ACTIONS[ln.action]; holdUntil = i + 1; }
+  else if (i > holdUntil && lastArms !== 'rest') { armTrack.push({ t: ln.start, arms: 'rest' }); lastArms = 'rest'; }
+});
+// Leo turns his head toward Switch, down at the phone on inserts, never at camera
+const lookTrack = timing.lines.map((ln) => ({ t: ln.start - 0.1, yaw: ln.insert ? 0.0 : 0.12, pitch: ln.insert ? 0.35 : 0 }));
+
+const DURATION = timing.duration + END_CARD;
+window.DURATION = DURATION;
+
+window.seek = (t) => {
+  let li = 0;
+  timing.lines.forEach((ln, i) => { if (t >= ln.start - 0.1) li = i; });
+  const ln = timing.lines[li], prevLn = timing.lines[Math.max(0, li - 1)];
+
+  // Switch: eyes snap per turn (with the blink-swap), body still; hop/tilt only when authored
+  const st = sw.state;
+  st.t = t;
+  st.expr = ln.eyes || ln.switch_eyes || prevLn.eyes || 'happy'; st.prev = prevLn.eyes || prevLn.switch_eyes || 'happy';
+  st.mix = li === 0 ? 1 : Math.min((t - (ln.start - 0.1)) / 0.14, 1);
+  let arms = 'rest', armsPrev = 'rest', armsT = 0;
+  for (const a of armTrack) if (t >= a.t) { armsPrev = arms; arms = a.arms; armsT = a.t; }
+  st.arms = arms; st.prevArms = armsPrev; st.poseMix = Math.min((t - armsT) / 0.32, 1);
+  st.blink = blinkAt(SW_BLINKS, t);
+  st.look = [0, 0];
+  sw.update();
+  let hop = 0, tilt = 0;
+  timing.lines.forEach((l) => {
+    if (l.who !== 'switch') return;
+    if (l.action === 'hop') hop = Math.max(hop, pulse(t, l.start + 0.05, 0.16, 0.24));
+    if (l.action === 'tilt') tilt = Math.max(tilt, pulse(t, l.start, 0.2, 1.4));
+  });
+  sw.root.position.y = 0.06 * hop;
+  sw.body.scale.set(1, 1, 1);
+  sw.body.rotation.z = 0.07 * tilt;
+
+  // the human: face preset per his turns, mouth from his word timings, blinks, eyeline
+  const ms = human.state;
+  let mi = -1, mpi = -1;
+  timing.lines.forEach((l, i) => { if (l.face && t >= l.start - 0.15) { mpi = mi; mi = i; } });
+  ms.face = mi >= 0 ? timing.lines[mi].face : 'neutral';
+  ms.prevFace = mpi >= 0 ? timing.lines[mpi].face : 'neutral';
+  ms.faceMix = mi >= 0 ? Math.min((t - (timing.lines[mi].start - 0.15)) / 0.2, 1) : 1;
+  let open = 0;
+  // a caption token like "12:30" carries its spoken words in parts, so the mouth still moves per word
+  for (const l of timing.lines) if (l.who === 'human') for (const w of l.words.flatMap((x) => x.parts || [x])) {
+    if (t >= w.s - 0.03 && t <= w.e) {
+      const ph = (t - w.s) * 2 * Math.PI * 6;
+      open = Math.max(open, (0.55 + 0.45 * Math.abs(Math.sin(ph))) * Math.min(1, (t - w.s + 0.03) / 0.05));
+    }
+  }
+  ms.mouthOpen = open;
+  // body pose: set on his own lines, held until his next line, blended over 0.3 s
+  let pi = -1, ppi = -1;
+  timing.lines.forEach((l, i) => { if (l.who === 'human' && l.pose && t >= l.start - 0.25) { ppi = pi; pi = i; } });
+  ms.pose = pi >= 0 ? timing.lines[pi].pose : 'rest';
+  ms.prevPose = ppi >= 0 ? timing.lines[ppi].pose : ms.pose;
+  ms.poseMix = pi >= 0 ? ease((t - (timing.lines[pi].start - 0.25)) / 0.3) : 1;
+  ms.blink = blinkAt(HU_BLINKS, t);
+  let look = lookTrack[0], lookPrev = lookTrack[0];
+  for (const l of lookTrack) if (t >= l.t) { lookPrev = look; look = l; }
+  const lk = ease((t - look.t) / 0.35);
+  ms.yaw = lookPrev.yaw + (look.yaw - lookPrev.yaw) * lk;
+  ms.pitch = lookPrev.pitch + (look.pitch - lookPrev.pitch) * lk + (ln.who === 'human' ? 0.02 * pulse(t, ln.start, 0.12, 0.3) : 0);
+  human.update();
+  set.update(t);
+
+  // camera: hard cut per planned shot, tiny push within the shot; the human's shots follow his head
+  let cur = plan[0];
+  for (const p of plan) if (t >= p.t) cur = p;
+  const s = SHOTS[cur.shot];
+  human.root.rotation.y = BOTH_IN_FRAME.has(cur.shot) ? HU_YAW_TWO : HU_YAW;
+  sw.root.rotation.y = SW_TURN_SHOTS.has(cur.shot) ? SW_YAW_TWO : SW_YAW;
+  const follow = s.who === 'human' ? human.head.getWorldPosition(new THREE.Vector3()).sub(HU_HEAD_REST) : new THREE.Vector3();
+  const at = s.at.clone().add(follow);
+  const k = Math.min((t - cur.t) / 3, 1) * 0.025;
+  camera.position.copy(s.pos.clone().add(follow).lerp(at, k));
+  camera.fov = s.fov; camera.updateProjectionMatrix();
+  camera.lookAt(at);
+  if (s.roll) camera.rotateZ(s.roll); // roll after lookAt, or lookAt would undo it
+  camera.updateMatrixWorld();
+  composer.render();
+
+  octx.clearRect(0, 0, W, H);
+  const endT = t - timing.duration;
+  if (endT < 0) {
+    for (const l of timing.lines) for (const c of l.chunks) if (t >= c.show && t < c.hide) drawCaption(c, l.who, camera);
+  } else drawEndCard(Math.min(endT / 0.25, 1));
+  overlayTex.needsUpdate = true;
+  renderer.autoClear = false; renderer.render(overlayScene, overlayCam); renderer.autoClear = true;
+};
+
+await document.fonts.load('600 46px "DM Sans"');
+await document.fonts.load('700 68px "DM Sans"');
+await document.fonts.load('800 200px "DM Sans"');
+await document.fonts.load('500 84px "DM Sans"');
+await new Promise((r) => (markImg.complete ? r() : (markImg.onload = r)));
+await new Promise((r) => (wordmark.complete ? r() : (wordmark.onload = r)));
+await new Promise((r) => { const c = () => (set.ready() ? r() : setTimeout(c, 30)); c(); });
+window.seek(0);
+window.ready = true;
+</script>
+</body>
+</html>

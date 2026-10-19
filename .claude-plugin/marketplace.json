@@ -1,0 +1,15 @@
+{
+  "name": "character-reel-kit",
+  "description": "Skills for making two-character comedy reels with Claude Code, distilled from a real production.",
+  "owner": {
+    "name": "Sameer Ahmed Khan"
+  },
+  "plugins": [
+    {
+      "name": "character-reel",
+      "displayName": "Character Reel",
+      "source": "./plugins/character-reel",
+      "description": "Make a short two-character comedy reel with /character-reel: a mascot and a human in a three.js set, voiced by ElevenLabs v3 as one acted conversation, timing re-anchored to Whisper so captions never drift, gap-free line tiling, beat-cut camera with two-shot facing cheats, sentence-aware captions with time digits, ducked music mix, and scripted gates (caption sync, loudness, true peak, length)."
+    }
+  ]
+}

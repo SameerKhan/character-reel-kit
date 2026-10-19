@@ -1,0 +1,10 @@
+{
+  "name": "character-reel-engine",
+  "private": true,
+  "description": "three.js characters, desk set and headless-Chrome frame renderer for character-reel",
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.48.2",
+    "three": "0.170.0"
+  }
+}

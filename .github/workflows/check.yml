@@ -1,0 +1,26 @@
+name: check
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Python compiles
+        run: python -m py_compile plugins/character-reel/skills/character-reel/scripts/voice/*.py
+      - name: Shell scripts parse
+        run: bash -n plugins/character-reel/skills/character-reel/scripts/make-reel.sh && bash -n plugins/character-reel/skills/character-reel/scripts/engine/mix.sh
+      - name: JSON manifests and example parse
+        run: for f in .claude-plugin/marketplace.json plugins/character-reel/.claude-plugin/plugin.json plugins/character-reel/skills/character-reel/examples/ep01-wrap/*.json; do python -m json.tool "$f" > /dev/null; done
+      - name: No em dashes
+        run: "! grep -rn $'\\u2014' --include=*.md --include=*.py --include=*.sh --include=*.html --include=*.js --include=*.mjs ."
+      - name: Example timing re-anchors and gates (offline, no API key)
+        run: |
+          pip install numpy soundfile faster-whisper
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          S=plugins/character-reel/skills/character-reel
+          mkdir -p /tmp/w/episodes && cp -R $S/examples/ep01-wrap /tmp/w/episodes/
+          python $S/scripts/voice/eleven_episode.py /tmp/w/episodes/ep01-wrap /tmp/w/episodes/ep01-wrap/dialogue.mp3 /tmp/w/episodes/ep01-wrap/dialogue.timing.json 0.2
+          python $S/scripts/voice/check_sync.py /tmp/w/episodes/ep01-wrap 0.25
